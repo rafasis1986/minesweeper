@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from setuptools import find_packages, setup
 
+
 PROJECT_NAME = "minesweeper_api"
 VERSION = "0.1"
 
