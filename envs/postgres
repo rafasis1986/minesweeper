@@ -1,0 +1,8 @@
+DATABASE_URL# PostgreSQL
+# ------------------------------------------------------------------------------
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=minesweeper
+POSTGRES_USER=DJANGO
+POSTGRES_PASSWORD=django
+POSTGRES_CONN_MAX_AGE=600
