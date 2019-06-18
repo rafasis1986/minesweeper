@@ -2,8 +2,8 @@ MINE_CELL = -1
 SAFE_CELL = 0
 HIDDEN_CELL = '.'
 OPEN_CELL = ''
-FLAG_CELL = '?'
-REDFLAG_CELL = 'r'
+QUESTION_CELL = '?'
+FLAG_CELL = '!'
 
 STATES = (
     (0, 'new'),

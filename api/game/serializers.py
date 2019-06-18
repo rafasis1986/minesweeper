@@ -1,4 +1,4 @@
-from api.game.models import Game
+from api.game import models
 
 from rest_framework import serializers
 
@@ -6,7 +6,7 @@ from rest_framework import serializers
 class GameSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = Game
+        model = models.Game
         fields = ('uid', 'name', 'state', 'moves')
 
 
@@ -20,4 +20,27 @@ class GameNewSerializer(serializers.Serializer):
 class GameSelectPosSerializer(serializers.Serializer):
     x = serializers.IntegerField(min_value=0)
     y = serializers.IntegerField(min_value=0)
-    option = serializers.CharField(required=False)
+
+
+class GameSelectFlagSerializer(GameSelectPosSerializer):
+    flag = serializers.CharField()
+
+
+class PlayerSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.Player
+        fields = ('id', 'username')
+        read_only_fields = ('username', )
+
+
+class CreatePlayerSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField()
+
+    def create(self, validated_data):
+        return models.Player.objects.create_user(**validated_data)
+
+    class Meta:
+        model = models.Player
+        fields = ('email', 'password')
+        extra_kwargs = {'password': {'write_only': True}}

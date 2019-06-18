@@ -3,12 +3,34 @@ import uuid
 import api.constants as c
 import api.snippets as snip
 
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.postgres.fields.array import ArrayField
 from django.db import models
 
 
+class CustomUserManager(UserManager):
+
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError('The given email must be set')
+        extra_fields.setdefault('is_staff', False)
+        extra_fields.setdefault('is_superuser', False)
+        extra_fields.setdefault('is_active', True)
+        return self._create_user(email, email, password, **extra_fields)
+
+
+class Player(AbstractUser):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    objects = CustomUserManager()
+
+    class Meta:
+        db_table = 'player'
+
+
 class Game(models.Model):
     uid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    player = models.ForeignKey(Player, related_name='games', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     elapsed_time = models.PositiveIntegerField(default=0)
@@ -21,7 +43,6 @@ class Game(models.Model):
 
     class Meta:
         db_table = 'game'
-        verbose_name = 'Game'
 
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
@@ -56,6 +77,11 @@ class Game(models.Model):
         self.flags += 1
         self.moves[x][y] = c.FLAG_CELL
 
+    def set_question(self, x, y):
+        assert self.moves[y][x] == c.HIDDEN_CELL
+        self.flags += 1
+        self.moves[x][y] = c.QUESTION_CELL
+
     def show_cell(self, x, y):
         if self.moves[y][x] != c.HIDDEN_CELL:
             return
@@ -65,3 +91,7 @@ class Game(models.Model):
         assert self.moves[y][x] == c.FLAG_CELL
         self.moves[x][y] = c.HIDDEN_CELL
         self.flags -= 1
+
+    def remove_question(self, x, y):
+        assert self.moves[y][x] == c.QUESTION_CELL
+        self.moves[x][y] = c.HIDDEN_CELL

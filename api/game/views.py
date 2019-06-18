@@ -1,25 +1,29 @@
+import api.constants as c
 import api.game.serializers as s
-from api.game.models import Game
+from api.game import models
+from api.game.serializers import CreatePlayerSerializer
 
-from rest_framework import permissions, viewsets
+from django.db.utils import IntegrityError
+
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import detail_route
 from rest_framework.exceptions import APIException
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 
-class GameViewSet(viewsets.ViewSet):
-    queryset = Game.objects.all()
+class GameViewSet(viewsets.ModelViewSet):
     serializer_class = s.GameSerializer
-    permission_classes = (permissions.AllowAny,)
 
-    def list(self, request, *args, **kwargs):
-        return Response()
+    def get_queryset(self):
+        return models.Game.objects.filter(player__id=self.request.user.id).order_by('created')
 
     def get_object(self, pk):
         try:
-            return Game.objects.get(pk=pk)
+            game = models.Game.objects.get(pk=pk, player__id=self.request.user.id)
+            return game
         except: # noqa
-            raise APIException(404)
+            raise APIException(detail='No game found')
 
     def create(self, request):
         serializer = s.GameNewSerializer(data=request.data)
@@ -28,33 +32,72 @@ class GameViewSet(viewsets.ViewSet):
         columns = serializer.validated_data['columns']
         mines = serializer.validated_data['mines']
         name = serializer.validated_data.get('name')
-        game = Game()
+        game = models.Game()
+        game.player = request.user
         game.new_board(rows, columns, mines)
         if name:
             game.name = name
         game.save()
         serializer = s.GameSerializer(game, context={'request': request})
-        return Response(serializer.data)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def update(self, request, pk=None):
         serializer = s.GameSelectPosSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        px = serializer.validated_data['x']
-        py = serializer.validated_data['y']
-        game = self.get_object(pk)
-        game.show_cell(px, py)
-        game.save()
-        serializer = s.GameSerializer(game, context={'request': request})
-        return Response(serializer.data)
+        try:
+            px = serializer.validated_data['x']
+            py = serializer.validated_data['y']
+            game = self.get_object(pk)
+            if game.is_mine(px, py):
+                game.game_over()
+            else:
+                game.show_cell(px, py)
+                if game.is_end_game():
+                    game.state = 1
+            game.save()
+            serializer = s.GameSerializer(game, context={'request': request})
+            return Response(serializer.data)
+        except: # noqa
+            raise APIException(detail="You can't show this cell")
 
     @detail_route(methods=['put'])
     def set_flag(self, request, pk=None):
-        serializer = s.GameSelectPosSerializer(data=request.data)
+        serializer = s.GameSelectFlagSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        px = serializer.validated_data['x']
-        py = serializer.validated_data['y']
-        game = self.get_object(pk)
-        game.set_flag(px, py)
-        game.save()
-        serializer = s.GameSerializer(game, context={'request': request})
-        return Response(serializer.data)
+        try:
+            px = serializer.validated_data['x']
+            py = serializer.validated_data['y']
+            flag_str = serializer.validated_data['flag']
+            game = self.get_object(pk)
+            if flag_str == c.FLAG_CELL:
+                game.set_flag(px, py)
+            elif flag_str == c.QUESTION_CELL:
+                game.set_question(px, py)
+            game.save()
+            serializer = s.GameSerializer(game, context={'request': request})
+            return Response(serializer.data)
+        except APIException as e:
+            raise e
+        except: # noqa
+            raise APIException(detail="You can't assign a flag in this cell")
+
+
+class PlayerViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    queryset = models.Player.objects.all()
+    serializer_class = CreatePlayerSerializer
+    permission_classes = (AllowAny,)
+
+    def create(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            self.perform_create(serializer)
+        except IntegrityError as e:
+            msg_str = e.args[0].split('DETAIL:')[-1]
+            raise APIException(detail=msg_str)
+        except Exception as e:
+            raise APIException(detail=e.args[0])
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
