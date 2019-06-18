@@ -54,7 +54,7 @@ class GameViewSet(viewsets.ModelViewSet):
             else:
                 game.show_cell(px, py)
                 if game.is_end_game():
-                    game.state = 1
+                    game.state = c.WON
             game.save()
             serializer = s.GameSerializer(game, context={'request': request})
             return Response(serializer.data)

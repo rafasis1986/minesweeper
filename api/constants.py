@@ -5,10 +5,16 @@ OPEN_CELL = ''
 QUESTION_CELL = '?'
 FLAG_CELL = '!'
 
+NEW = 'NEW'
+WON = 'WON'
+LOST = 'LOST'
+STARTED = 'STARTED'
+PAUSED = 'PAUSED'
+
 STATES = (
-    (0, 'new'),
-    (1, 'won'),
-    (2, 'lost'),
-    (3, 'started'),
-    (4, 'paused'),
+    (NEW, 'new'),
+    (WON, 'won'),
+    (LOST, 'lost'),
+    (STARTED, 'started'),
+    (PAUSED, 'paused'),
 )

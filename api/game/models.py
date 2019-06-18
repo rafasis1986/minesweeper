@@ -6,6 +6,7 @@ import api.snippets as snip
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.postgres.fields.array import ArrayField
 from django.db import models
+from django.template.defaultfilters import default
 
 
 class CustomUserManager(UserManager):
@@ -36,7 +37,7 @@ class Game(models.Model):
     elapsed_time = models.PositiveIntegerField(default=0)
     board = ArrayField(ArrayField(models.SmallIntegerField()))
     moves = ArrayField(ArrayField(models.CharField(max_length=1)))
-    state = models.IntegerField(choices=c.STATES, default=0)
+    state = models.CharField(max_length=25, choices=c.STATES, default=c.NEW)
     name = models.CharField(max_length=100)
     mines = models.PositiveIntegerField(default=0)
     flags = models.PositiveIntegerField(default=0)
@@ -52,7 +53,7 @@ class Game(models.Model):
                                  update_fields=update_fields)
 
     def game_over(self):
-        self.state = 2
+        self.state = c.LOST
         for y in range(len(self.board)):
             for x in range(len(self.board[0])):
                 if self.board[y][x] == c.MINE_CELL:
