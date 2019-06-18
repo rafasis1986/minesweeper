@@ -6,7 +6,6 @@ import api.snippets as snip
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.postgres.fields.array import ArrayField
 from django.db import models
-from django.template.defaultfilters import default
 
 
 class CustomUserManager(UserManager):
