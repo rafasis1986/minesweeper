@@ -1,3 +1,5 @@
+import datetime
+
 import api.constants as c
 import api.game.serializers as s
 from api.game import models
@@ -46,9 +48,10 @@ class GameViewSet(viewsets.ModelViewSet):
         serializer = s.GameSelectPosSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
+            game = self.get_object(pk)
+            game.last_play = datetime.datetime.now()
             px = serializer.validated_data['x']
             py = serializer.validated_data['y']
-            game = self.get_object(pk)
             if game.is_mine(px, py):
                 game.game_over()
             else:
@@ -58,7 +61,7 @@ class GameViewSet(viewsets.ModelViewSet):
             game.save()
             serializer = s.GameSerializer(game, context={'request': request})
             return Response(serializer.data)
-        except: # noqa
+        except Exception as e: # noqa
             raise APIException(detail="You can't show this cell")
 
     @detail_route(methods=['put'])
@@ -74,6 +77,21 @@ class GameViewSet(viewsets.ModelViewSet):
                 game.set_flag(px, py)
             elif flag_str == c.QUESTION_CELL:
                 game.set_question(px, py)
+            else:
+                game.set_hidden(px, py)
+            game.save()
+            serializer = s.GameSerializer(game, context={'request': request})
+            return Response(serializer.data)
+        except APIException as e:
+            raise e
+        except Exception as e: # noqa
+            raise APIException(detail="You can't assign a flag in this cell")
+
+    @detail_route(methods=['put'])
+    def resume(self, request, pk=None):
+        try:
+            game = self.get_object(pk)
+            game.set_resume()
             game.save()
             serializer = s.GameSerializer(game, context={'request': request})
             return Response(serializer.data)
@@ -81,6 +99,32 @@ class GameViewSet(viewsets.ModelViewSet):
             raise e
         except: # noqa
             raise APIException(detail="You can't assign a flag in this cell")
+
+    @detail_route(methods=['put'])
+    def pause(self, request, pk=None):
+        try:
+            game = self.get_object(pk)
+            game.set_pause()
+            game.save()
+            serializer = s.GameSerializer(game, context={'request': request})
+            return Response(serializer.data)
+        except APIException as e:
+            raise e
+        except: # noqa
+            raise APIException(detail="You can't assign a flag in this cell")
+
+    @detail_route(methods=['put'])
+    def reset(self, request, pk=None):
+        try:
+            game = self.get_object(pk)
+            game.reset()
+            game.save()
+            serializer = s.GameSerializer(game, context={'request': request})
+            return Response(serializer.data)
+        except APIException as e:
+            raise e
+        except: # noqa
+            raise APIException(detail="You can't restart this game")
 
 
 class PlayerViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):

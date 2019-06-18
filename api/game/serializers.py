@@ -7,7 +7,7 @@ class GameSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Game
-        fields = ('uid', 'name', 'state', 'moves')
+        fields = ('uid', 'name', 'state', 'moves', 'elapsed_time')
 
 
 class GameNewSerializer(serializers.Serializer):
@@ -23,7 +23,7 @@ class GameSelectPosSerializer(serializers.Serializer):
 
 
 class GameSelectFlagSerializer(GameSelectPosSerializer):
-    flag = serializers.CharField()
+    flag = serializers.CharField(allow_null=True)
 
 
 class PlayerSerializer(serializers.ModelSerializer):

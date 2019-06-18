@@ -1,3 +1,4 @@
+import datetime
 import uuid
 
 import api.constants as c
@@ -33,6 +34,7 @@ class Game(models.Model):
     player = models.ForeignKey(Player, related_name='games', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
+    last_play = models.DateTimeField(null=True)
     elapsed_time = models.PositiveIntegerField(default=0)
     board = ArrayField(ArrayField(models.SmallIntegerField()))
     moves = ArrayField(ArrayField(models.CharField(max_length=1)))
@@ -48,11 +50,18 @@ class Game(models.Model):
              update_fields=None):
         if self.name in [None, '']:
             self.name = 'game #%s' % self.uid
+        if self.state not in [c.LOST, c.PAUSED, c.WON]:
+            if self.last_play:
+                self.elapsed_time += (datetime.datetime.now() - self.last_play).seconds
+            self.last_play = datetime.datetime.now()
         return models.Model.save(self, force_insert=force_insert, force_update=force_update, using=using,
                                  update_fields=update_fields)
 
     def game_over(self):
+        if self.state in [c.LOST, c.PAUSED, c.WON]:
+            return
         self.state = c.LOST
+        self.elapsed_time += (datetime.datetime.now() - self.last_play).seconds
         for y in range(len(self.board)):
             for x in range(len(self.board[0])):
                 if self.board[y][x] == c.MINE_CELL:
@@ -60,6 +69,16 @@ class Game(models.Model):
 
     def is_mine(self, x, y):
         return self.board[y][x] == c.MINE_CELL
+
+    def set_resume(self):
+        self.state = c.STARTED
+        self.last_play = datetime.datetime.now()
+
+    def set_pause(self):
+        self.state = c.PAUSED
+        if self.last_play:
+            self.elapsed_time += (datetime.datetime.now() - self.last_play).seconds
+            self.last_play = None
 
     def is_end_game(self):
         hidden_count = snip.count_hidden_cells(self.moves)
@@ -82,7 +101,15 @@ class Game(models.Model):
         self.flags += 1
         self.moves[x][y] = c.QUESTION_CELL
 
+    def set_hidden(self, x, y):
+        if self.state in [c.LOST, c.PAUSED, c.WON]:
+            return
+        if self.moves[y][x] in [c.QUESTION_CELL, c.FLAG_CELL]:
+            self.moves[x][y] = c.HIDDEN_CELL
+
     def show_cell(self, x, y):
+        if self.state in [c.LOST, c.PAUSED, c.WON]:
+            return
         if self.moves[y][x] != c.HIDDEN_CELL:
             return
         snip.show_adjacent_cells(self.board, self.moves, x, y)
@@ -95,3 +122,11 @@ class Game(models.Model):
     def remove_question(self, x, y):
         assert self.moves[y][x] == c.QUESTION_CELL
         self.moves[x][y] = c.HIDDEN_CELL
+
+    def reset(self):
+        for y in range(len(self.moves)):
+            for x in range(len(self.moves[0])):
+                self.moves[y][x] = c.HIDDEN_CELL
+        self.last_play = datetime.datetime.now()
+        self.elapsed_time = 0
+        self.state = c.STARTED
