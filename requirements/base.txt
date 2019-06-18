@@ -1,8 +1,10 @@
 # Core
+pytz==2019.1
 Django==2.2.*
+redis==3.2.1
+django-redis==4.10.0
 
 # For the persistence stores
-psycopg2-binary==2.8.3
 dj-database-url==0.5.0
 
 
@@ -11,3 +13,4 @@ djangorestframework==3.9.*
 django-cors-headers==3.0.2
 djangorestframework-jwt==1.11.0
 django-rest-auth==0.9.3
+coreapi==2.3.3 

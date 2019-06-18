@@ -2,5 +2,6 @@
 USE_DOCKER=yes
 DJANGO_SECRET_KEY=local
 IPYTHONDIR=/app/.ipython
+REDIS_URL=redis://redis:6379/0
 
 

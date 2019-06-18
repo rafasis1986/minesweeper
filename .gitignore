@@ -222,7 +222,7 @@ local.properties
 # Translations
 
 # Django stuff:
-
+static/*
 # Flask stuff:
 
 # Scrapy stuff:

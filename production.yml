@@ -1,0 +1,48 @@
+version: '3'
+
+volumes:
+  production_postgres_data: {}
+  production_postgres_data_backups: {}
+  production_traefik: {}
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: ./docker/production/django/Dockerfile
+    image: minesweeper_production_django
+    depends_on:
+      - db
+      - redis
+    env_file:
+      - ./envs/.production/.django
+      - ./envs/.production/.postgres
+    command: /start
+
+  db:
+    build:
+      context: .
+      dockerfile: ./docker/production/postgres/Dockerfile
+    image: minesweeper_production_postgres
+    volumes:
+      - production_postgres_data:/var/lib/postgresql/data
+      - production_postgres_data_backups:/backups
+    env_file:
+      - ./envs/.production/.postgres
+    ports:
+      - "5432:5432"
+
+  web:
+   image: nginx:1.13-alpine
+   depends_on:
+      - django
+   env_file: 
+      - ./envs/.production/.postgres
+   volumes:
+      - ./docker/production/nginx.conf:/etc/nginx/nginx.conf
+   ports:
+      - "80:80"
+
+  redis:
+    image: redis:5.0
+
